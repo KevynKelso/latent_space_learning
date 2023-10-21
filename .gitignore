@@ -1,3 +1,7 @@
+# kkelso
+filenames.txt
+img_align_celeba*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
