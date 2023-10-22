@@ -1,4 +1,5 @@
 # Taken from this paper: https://machinelearningmastery.com/how-to-interpolate-and-perform-vector-arithmetic-with-faces-using-a-generative-adversarial-network/
+from pathlib import Path
 from tqdm import tqdm
 from contextlib import redirect_stdout
 import numpy as np
@@ -12,6 +13,7 @@ from os import listdir
 
 
 checkpoint_count = 0
+thread_num = 0
 
 
 def load_image(filename):
@@ -41,7 +43,10 @@ def plot_faces(faces, n):
 
 def thread_func(func):
     def decorator(*args):
-        with open("thread.log", "w") as f:
+        global thread_num
+        thread_num += 1
+        Path("logs").mkdir(parents=True, exist_ok=True)
+        with open(f"logs/thread-{thread_num}.log", "w") as f:
             with redirect_stdout(f):
                 func(*args)
 
@@ -74,7 +79,8 @@ def run_faces(directory, split):
         try:
             face = extract_face(model, pixels)
         except:
-            print(f"WARNING: could not extract face from '{image}'")
+            with open("warnings.txt", "a") as f:
+                f.write(f"WARNING: could not extract face from '{image}'\n")
 
         if face is None:
             continue
