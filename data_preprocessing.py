@@ -1,8 +1,8 @@
 # Taken from this paper: https://machinelearningmastery.com/how-to-interpolate-and-perform-vector-arithmetic-with-faces-using-a-generative-adversarial-network/
+from tqdm import tqdm
+from contextlib import redirect_stdout
 import numpy as np
-from os.path import isfile
 from threading import Thread
-import gc
 from PIL import Image
 from matplotlib import pyplot
 from mtcnn.mtcnn import MTCNN
@@ -39,6 +39,15 @@ def plot_faces(faces, n):
     pyplot.show()
 
 
+def thread_func(func):
+    def decorator(*args):
+        with open("thread.log", "w") as f:
+            with redirect_stdout(f):
+                func(*args)
+
+    return decorator
+
+
 def extract_face(model, pixels, required_size=(80, 80)):
     faces = model.detect_faces(pixels)
     if len(faces) == 0:
@@ -53,6 +62,7 @@ def extract_face(model, pixels, required_size=(80, 80)):
     return face_array
 
 
+@thread_func
 def run_faces(directory, split):
     model = MTCNN()
     faces = []
@@ -89,7 +99,7 @@ def load_faces_mtcnn(directory, num_files_per_thread=2000, num_threads=4):
         Thread(target=run_faces, args=(directory, split), daemon=True)
         for split in splits
     ]
-    for thread_group in grouped(threads, num_threads):
+    for thread_group in tqdm(grouped(threads, num_threads)):
         [t.start() for t in thread_group]
         [t.join() for t in thread_group]
 
