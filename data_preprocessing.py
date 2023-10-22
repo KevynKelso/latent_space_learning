@@ -1,4 +1,6 @@
 # Taken from this paper: https://machinelearningmastery.com/how-to-interpolate-and-perform-vector-arithmetic-with-faces-using-a-generative-adversarial-network/
+import sys
+from numpy import load
 from pathlib import Path
 from tqdm import tqdm
 from contextlib import redirect_stdout
@@ -20,6 +22,7 @@ def load_image(filename):
     image = Image.open(filename)
     image = image.convert("RGB")
     pixels = asarray(image)
+    image.close()
     return pixels
 
 
@@ -72,48 +75,52 @@ def run_faces(directory, split):
     model = MTCNN()
     faces = []
     for file in split:
-        image = directory + file
-        pixels = load_image(image)
-        face = None
-
         try:
+            image = directory + file
+            pixels = load_image(image)
+            face = None
+
             face = extract_face(model, pixels)
+            if face is None:
+                continue
+            faces.append(face)
+
         except:
             with open("warnings.txt", "a") as f:
-                f.write(f"WARNING: could not extract face from '{image}'\n")
+                f.write(f"WARNING: could not extract face from '{file}'\n")
 
-        if face is None:
-            continue
-
-        faces.append(face)
 
     global checkpoint_count
     checkpoint_count += 1
-    savez_compressed(f"img_align_celeba_{checkpoint_count}.npz", asarray(faces))
+    fname = f"img_align_celeba_{checkpoint_count}.npz"
+    savez_compressed(directory + fname, asarray(faces))
+    del faces
 
 
 def grouped(iterable, n):
     return zip(*[iter(iterable)] * n)
 
 
-def load_faces_mtcnn(directory, num_files_per_thread=2000, num_threads=4):
+def load_faces_mtcnn(directory, num_checkpoints=4, num_threads=4):
     filenames = []
     filenames = listdir(directory)
-    splits = np.array_split(filenames, num_files_per_thread)
+    splits = np.array_split(filenames, num_checkpoints)
 
-    threads = [
-        Thread(target=run_faces, args=(directory, split), daemon=True)
-        for split in splits
-    ]
-    for thread_group in tqdm(grouped(threads, num_threads)):
-        [t.start() for t in thread_group]
-        [t.join() for t in thread_group]
+    for split_group in tqdm(grouped(splits, num_threads)):
+        threads = [
+            Thread(target=run_faces, args=(directory, split), daemon=True)
+            for split in split_group
+        ]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
 
 
-def celeba_preproc():
-    directory = "img_align_celeba/"
-    load_faces_mtcnn(directory)
+def load_data():
+    data = load("img_align_celeba_1.npz")
+    faces = data["arr_0"]
+    print("Loaded: ", faces.shape)
+    plot_faces(faces, 5)
 
 
 if __name__ == "__main__":
-    celeba_preproc()
+    load_faces_mtcnn(sys.argv[1])
