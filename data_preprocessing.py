@@ -104,6 +104,10 @@ def grouped(iterable, n):
 def load_faces_mtcnn(directory, num_checkpoints=4, num_threads=4):
     filenames = []
     filenames = listdir(directory)
+    for file in filenames:
+        if 'npz' in file:
+            print(f"directory '{directory}' has already been preprocessed")
+            return
     splits = np.array_split(filenames, num_checkpoints)
 
     for split_group in tqdm(grouped(splits, num_threads)):
