@@ -11,6 +11,9 @@ from numpy import savez_compressed
 from os import listdir
 
 
+checkpoint_count = 0
+
+
 def load_image(filename):
     image = Image.open(filename)
     image = image.convert("RGB")
@@ -50,10 +53,11 @@ def extract_face(model, pixels, required_size=(80, 80)):
     return face_array
 
 
-def run_faces(directory, split, faces, completed_files):
+def run_faces(directory, split):
     model = MTCNN()
+    faces = []
     for file in split:
-        image = directory + file[0]
+        image = directory + file
         pixels = load_image(image)
         face = None
 
@@ -66,68 +70,32 @@ def run_faces(directory, split, faces, completed_files):
             continue
 
         faces.append(face)
-        completed_files.append(file)
+
+    global checkpoint_count
+    checkpoint_count += 1
+    savez_compressed(f"img_align_celeba_{checkpoint_count}.npz", asarray(faces))
 
 
-def generate_csv_filenames(directory):
-    if isfile("filenames.txt"):
-        return
-    filenames = listdir(directory)
-    with open("filenames.txt", "w") as f:
-        f.write("\n".join(filenames))
+def grouped(iterable, n):
+    return zip(*[iter(iterable)] * n)
 
 
-def load_faces_mtcnn(directory):
-    checkpoint_count = 0
-    completed_files = []
-    faces = []
+def load_faces_mtcnn(directory, num_files_per_thread=2000, num_threads=4):
     filenames = []
-    thread_count = 0
-    num_files_per_thread = 1000
-    num_threads = 4
+    filenames = listdir(directory)
+    splits = np.array_split(filenames, num_files_per_thread)
 
-    try:
-        with open("filenames.txt", "r") as f:
-            filenames = f.readlines()
-            filenames = [file.split() for file in filenames]
-
-        splits = np.array_split(filenames, num_files_per_thread)
-
-        threads = [
-            Thread(
-                target=run_faces, args=(directory, split, faces, completed_files), daemon=True
-            )
-            for split in splits
-        ]
-        while thread_count < len(threads):
-            thread_idx = [x for x in range(thread_count, num_threads+thread_count)]
-            [threads[t].start() for t in thread_idx]
-            [threads[t].join() for t in thread_idx]
-
-            savez_compressed(f"img_align_celeba_{checkpoint_count}.npz", asarray(faces))
-            checkpoint_count += 1
-            thread_count += num_threads
-            del faces
-            gc.collect()
-            faces = []
-
-    except KeyboardInterrupt:
-        print(f"total_files = {len(filenames)}")
-        print(f"completed_files = {len(completed_files)}")
-        for file in completed_files:
-            filenames.remove(file)
-        print(f"remaining_files = {len(filenames)}")
-
-        if 'faces' in locals():
-            savez_compressed(f"img_align_celeba_{hash(filenames[-1][0])}", asarray(faces))
-
-        with open("filenames.txt", "w") as f:
-            f.write("\n".join([f[0] for f in filenames]))
+    threads = [
+        Thread(target=run_faces, args=(directory, split), daemon=True)
+        for split in splits
+    ]
+    for thread_group in grouped(threads, num_threads):
+        [t.start() for t in thread_group]
+        [t.join() for t in thread_group]
 
 
 def celeba_preproc():
     directory = "img_align_celeba/"
-    generate_csv_filenames(directory)
     load_faces_mtcnn(directory)
 
 
