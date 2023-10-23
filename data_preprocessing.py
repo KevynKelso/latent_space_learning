@@ -1,13 +1,11 @@
 # Taken from this paper: https://machinelearningmastery.com/how-to-interpolate-and-perform-vector-arithmetic-with-faces-using-a-generative-adversarial-network/
 import sys
-from numpy import load
 from pathlib import Path
 from tqdm import tqdm
 from contextlib import redirect_stdout
 import numpy as np
 from threading import Thread
 from PIL import Image
-from matplotlib import pyplot
 from mtcnn.mtcnn import MTCNN
 from numpy import asarray
 from numpy import savez_compressed
@@ -35,13 +33,6 @@ def load_faces(directory, n_faces):
             break
     return asarray(faces)
 
-
-def plot_faces(faces, n):
-    for i in range(n * n):
-        pyplot.subplot(n, n, 1 + i)
-        pyplot.axis("off")
-        pyplot.imshow(faces[i])
-    pyplot.show()
 
 
 def thread_func(func):
@@ -117,13 +108,6 @@ def load_faces_mtcnn(directory, num_checkpoints=4, num_threads=4):
         ]
         [t.start() for t in threads]
         [t.join() for t in threads]
-
-
-def load_data():
-    data = load("img_align_celeba_1.npz")
-    faces = data["arr_0"]
-    print("Loaded: ", faces.shape)
-    plot_faces(faces, 5)
 
 
 if __name__ == "__main__":

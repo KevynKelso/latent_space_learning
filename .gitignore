@@ -1,6 +1,7 @@
 # kkelso
 filenames.txt
 img_align_celeba*
+*.npz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
