@@ -1,3 +1,4 @@
+from os.path import isfile
 import sys
 from glob import glob
 from matplotlib import pyplot
@@ -12,6 +13,11 @@ def plot_faces(faces, n):
     pyplot.show()
 
 def consolidate(img_dir):
+    output_file = "consolidated.npz"
+    if isfile(output_file):
+        print(f"file '{output_file}' already exists")
+        return
+
     all_faces = None
     npz_files = glob(f"{img_dir}/**/*.npz", recursive=True)
     for file in npz_files:

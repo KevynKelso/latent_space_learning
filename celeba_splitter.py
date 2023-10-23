@@ -10,7 +10,7 @@ filenames = listdir(directory)
 splits = np.array_split(filenames, 100)
 for i, split in tqdm(enumerate(splits)):
     subdirectory = f"img_align_celeba/{i}/"
-    Path(subdirectory).mkdir(parents=True, exist_ok=True)
+    Path(subdirectory).mkdir(parents=True, exist_ok=False)
     for file in split:
         move(directory + file, subdirectory + file) 
 
