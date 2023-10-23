@@ -1,26 +1,18 @@
 #!/usr/bin/env python3
-from pathlib import Path
 import sys
-from numpy import load
-from numpy import zeros
-from numpy import ones
-from numpy.random import randn
-from numpy.random import randint
-from keras.optimizers import Adam
+from pathlib import Path
+
+from keras.layers import (Conv2D, Conv2DTranspose, Dense, Dropout, Flatten,
+                          LeakyReLU, Reshape)
 from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import Reshape
-from keras.layers import Flatten
-from keras.layers import Conv2D
-from keras.layers import Conv2DTranspose
-from keras.layers import LeakyReLU
-from keras.layers import Dropout
+from keras.optimizers import Adam
 from matplotlib import pyplot
+from numpy import load, ones, zeros
+from numpy.random import randint, randn
 
 
 def define_discriminator(in_shape=(80, 80, 3)):
     model = Sequential()
-    # was originally 128
     num_filters = 128
 
     model.add(Conv2D(num_filters, (5, 5), padding="same", input_shape=in_shape))
@@ -180,15 +172,15 @@ def train(g_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batc
             summarize_performance(i, g_model, d_model, dataset, latent_dim)
 
 
-def main():
+def main(npz_dataset):
     Path("outputs").mkdir(parents=True, exist_ok=True)
     latent_dim = 100
     d_model = define_discriminator()
     g_model = define_generator(latent_dim)
     gan_model = define_gan(g_model, d_model)
-    dataset = load_real_samples(sys.argv[1])
+    dataset = load_real_samples(npz_dataset)
     train(g_model, d_model, gan_model, dataset, latent_dim)
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1])

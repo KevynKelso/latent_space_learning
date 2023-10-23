@@ -1,7 +1,9 @@
 from os import listdir
-import numpy as np
+from os.path import isfile
 from pathlib import Path
 from shutil import move
+
+import numpy as np
 from tqdm import tqdm
 
 directory = "img_align_celeba/"
@@ -12,5 +14,6 @@ for i, split in tqdm(enumerate(splits)):
     subdirectory = f"img_align_celeba/{i}/"
     Path(subdirectory).mkdir(parents=True, exist_ok=False)
     for file in split:
-        move(directory + file, subdirectory + file) 
+        if isfile(file):
+            move(directory + file, subdirectory + file) 
 

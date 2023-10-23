@@ -1,8 +1,9 @@
-from os.path import isfile
 import sys
 from glob import glob
-from matplotlib import pyplot
+from os.path import isfile
+
 import numpy as np
+from matplotlib import pyplot
 
 
 def plot_faces(faces, n):

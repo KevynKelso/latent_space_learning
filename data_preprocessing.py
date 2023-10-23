@@ -1,16 +1,15 @@
 # Taken from this paper: https://machinelearningmastery.com/how-to-interpolate-and-perform-vector-arithmetic-with-faces-using-a-generative-adversarial-network/
 import sys
-from pathlib import Path
-from tqdm import tqdm
 from contextlib import redirect_stdout
-import numpy as np
-from threading import Thread
-from PIL import Image
-from mtcnn.mtcnn import MTCNN
-from numpy import asarray
-from numpy import savez_compressed
 from os import listdir
+from pathlib import Path
+from threading import Thread
 
+import numpy as np
+from mtcnn.mtcnn import MTCNN
+from numpy import asarray, savez_compressed
+from PIL import Image
+from tqdm import tqdm
 
 checkpoint_count = 0
 thread_num = 0
