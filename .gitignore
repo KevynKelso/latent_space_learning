@@ -2,6 +2,9 @@
 filenames.txt
 img_align_celeba*
 *.npz
+*.h5
+*.png
+outputs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
