@@ -33,7 +33,6 @@ def load_faces(directory, n_faces):
     return asarray(faces)
 
 
-
 def thread_func(func):
     def decorator(*args):
         global thread_num
@@ -79,7 +78,6 @@ def run_faces(directory, split):
             with open("warnings.txt", "a") as f:
                 f.write(f"WARNING: could not extract face from '{file}'\n")
 
-
     global checkpoint_count
     checkpoint_count += 1
     fname = f"img_align_celeba_{checkpoint_count}.npz"
@@ -95,7 +93,7 @@ def load_faces_mtcnn(directory, num_checkpoints=4, num_threads=4):
     filenames = []
     filenames = listdir(directory)
     for file in filenames:
-        if 'npz' in file:
+        if "npz" in file:
             print(f"directory '{directory}' has already been preprocessed")
             return
     splits = np.array_split(filenames, num_checkpoints)

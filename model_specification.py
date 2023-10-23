@@ -2,8 +2,15 @@
 import sys
 from pathlib import Path
 
-from keras.layers import (Conv2D, Conv2DTranspose, Dense, Dropout, Flatten,
-                          LeakyReLU, Reshape)
+from keras.layers import (
+    Conv2D,
+    Conv2DTranspose,
+    Dense,
+    Dropout,
+    Flatten,
+    LeakyReLU,
+    Reshape,
+)
 from keras.models import Sequential
 from keras.optimizers import Adam
 from matplotlib import pyplot

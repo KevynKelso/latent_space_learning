@@ -15,5 +15,4 @@ for i, split in tqdm(enumerate(splits)):
     Path(subdirectory).mkdir(parents=True, exist_ok=False)
     for file in split:
         if isfile(file):
-            move(directory + file, subdirectory + file) 
-
+            move(directory + file, subdirectory + file)

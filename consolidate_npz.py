@@ -13,6 +13,7 @@ def plot_faces(faces, n):
         pyplot.imshow(faces[i])
     pyplot.show()
 
+
 def consolidate(img_dir):
     output_file = "consolidated.npz"
     if isfile(output_file):
@@ -35,10 +36,16 @@ def consolidate(img_dir):
     print("Loaded: ", all_faces.shape)
     plot_faces(all_faces, 5)
     np.savez_compressed(f"consolidated.npz", np.asarray(all_faces))
-    import os, psutil; print(psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2)
+    import os
+
+    import psutil
+
+    print(psutil.Process(os.getpid()).memory_info().rss / 1024**2)
+
 
 def main():
     consolidate(sys.argv[1])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
