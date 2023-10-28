@@ -14,8 +14,10 @@ from keras.layers import (
 from keras.models import Sequential
 from keras.optimizers import Adam
 from matplotlib import pyplot
-from numpy import load, ones, zeros
+from numpy import ones, zeros
 from numpy.random import randint, randn
+
+from utils_data import load_real_samples
 
 
 def define_discriminator(in_shape=(80, 80, 3)):
@@ -82,16 +84,6 @@ def define_gan(g_model, d_model):
     opt = Adam(lr=0.0002, beta_1=0.5)
     model.compile(loss="binary_crossentropy", optimizer=opt)
     return model
-
-
-def load_real_samples(npz_dataset):
-    data = load(npz_dataset)
-    X = data["arr_0"]
-
-    X = X.astype("float32")
-
-    X = (X - 127.5) / 127.5
-    return X
 
 
 def generate_real_samples(dataset, n_samples):

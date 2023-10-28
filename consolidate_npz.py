@@ -3,15 +3,8 @@ from glob import glob
 from os.path import isfile
 
 import numpy as np
-from matplotlib import pyplot
 
-
-def plot_faces(faces, n):
-    for i in range(n * n):
-        pyplot.subplot(n, n, 1 + i)
-        pyplot.axis("off")
-        pyplot.imshow(faces[i])
-    pyplot.show()
+from utils_data import plot_faces
 
 
 def consolidate(img_dir):
