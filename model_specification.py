@@ -142,33 +142,51 @@ def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_sample
     filename = "outputs/generator_model_%03d.h5" % (epoch + 1)
     g_model.save(filename)
 
+    filename = "outputs/discriminator_model_%03d.h5" % (epoch + 1)
+    d_model.save(filename)
 
-def train(g_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batch=128):
+
+def train(g_model, d_model, gan_model, dataset, latent_dim, n_epochs=200, n_batch=256):
     bat_per_epo = int(dataset.shape[0] / n_batch)
     half_batch = int(n_batch / 2)
+    mode_collapse_count = 0
+    mode_collapse_threshold = 3
+    epoch = 0
 
-    for i in range(n_epochs):
-        for j in range(bat_per_epo):
+    while epoch < n_epochs:
+        for batch in range(bat_per_epo):
             X_real, y_real = generate_real_samples(dataset, half_batch)
-
             d_loss1, _ = d_model.train_on_batch(X_real, y_real)
-
             X_fake, y_fake = generate_fake_samples(g_model, latent_dim, half_batch)
-
             d_loss2, _ = d_model.train_on_batch(X_fake, y_fake)
 
             X_gan = generate_latent_points(latent_dim, n_batch)
-
             y_gan = ones((n_batch, 1))
-
             g_loss = gan_model.train_on_batch(X_gan, y_gan)
 
             print(
                 ">%d, %d/%d, d1=%.3f, d2=%.3f g=%.3f"
-                % (i + 1, j + 1, bat_per_epo, d_loss1, d_loss2, g_loss)
+                % (epoch + 1, batch + 1, bat_per_epo, d_loss1, d_loss2, g_loss)
             )
-        if (i + 1) % 10 == 0:
-            summarize_performance(i, g_model, d_model, dataset, latent_dim)
+            # mode collapse detection
+            if g_loss > 1000 and epoch > 1:
+                mode_collapse_count += 1
+            else:
+                mode_collapse_count = 0
+
+            if mode_collapse_count > mode_collapse_threshold:
+                print("Mode collapse detected! Restoring model from previous epoch.")
+                mode_collapse_count = 0
+                epoch -= 1
+                g_model.load_weights(f"./outputs/generator_e{epoch}")
+                d_model.load_weights(f"./outputs/discriminator_e{epoch}")
+                break
+        else:
+            g_model.save_weights(f"./outputs/generator_e{epoch}")
+            d_model.save_weights(f"./outputs/discriminator_e{epoch}")
+            if (epoch + 1) % 10 == 0:
+                summarize_performance(epoch, g_model, d_model, dataset, latent_dim)
+            epoch += 1
 
 
 def main(npz_dataset):
@@ -178,6 +196,7 @@ def main(npz_dataset):
     g_model = define_generator(latent_dim)
     gan_model = define_gan(g_model, d_model)
     dataset = load_real_samples(npz_dataset)
+    print(dataset.shape)
     train(g_model, d_model, gan_model, dataset, latent_dim)
 
 
