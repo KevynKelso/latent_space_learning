@@ -1,0 +1,3 @@
+[submodule "progressive_growing_of_gans"]
+	path = progressive_growing_of_gans
+	url = git@github.com:KevynKelso/progressive_growing_of_gans.git
