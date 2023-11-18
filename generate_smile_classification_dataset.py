@@ -50,7 +50,6 @@ def main(gan_pickle):
 def load_smiling(gan_pickle):
     smiling_latents = np.load("smiling.npz")["arr_0"]
     print(smiling_latents)
-    print(smiling_latents.shape)
 
     for latent in smiling_latents:
         latent = np.array([latent])
@@ -60,5 +59,15 @@ def load_smiling(gan_pickle):
         plot_faces(images, 1)
 
 
+def average_smiling(gan_pickle):
+    smiling_latents = np.load("not_smiling.npz")["arr_0"]
+    print(smiling_latents.shape)
+
+    avg_latent = smiling_latents.mean(axis=0)
+    avg_latent = np.array([avg_latent])
+    images = run_model(gan_pickle, avg_latent)
+    plot_faces(images, 1)
+
+
 if __name__ == "__main__":
-    main(sys.argv[1])
+    average_smiling(sys.argv[1])
