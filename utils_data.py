@@ -17,12 +17,13 @@ def load_real_samples(npz_dataset, normalize=True):
     return X
 
 
-def plot_faces(faces, n, titles=None):
+def plot_faces(faces, n, titles=None, suptitle=None):
     for i in range(n * n):
         label = None
         if titles is not None and len(titles) > i:
             print(titles[i][0])
-            label = f"{titles[i][0]:.3f}% smile"
+            label = f"{titles[i][0]*100:.3f}% smile"
+        # TODO(kkelso): overall title
         pyplot.subplot(n, n, 1 + i, title=label)
         pyplot.axis("off")
         pyplot.imshow(faces[i])
