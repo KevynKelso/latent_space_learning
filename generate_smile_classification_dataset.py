@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image
 
 from progressive_growing_of_gans.pretrained_gan import run_model
-from utils_data import load_real_samples, plot_faces
+from utils_data import plot_faces
 
 num_images_to_generate = (
     30  # Adjust this value based on how much vram you have. 30 Requires about 24GB.
@@ -16,8 +16,8 @@ not_smiling_data = "not_smiling.npz"
 
 
 def main(gan_pickle):
-    smiling_latents = np.array((0, 0))
-    not_smiling_latents = np.array((0, 0))
+    smiling_latents = []
+    not_smiling_latents = []
 
     while len(smiling_latents) < 200000:
         if isfile(smiling_data):
@@ -40,10 +40,19 @@ def main(gan_pickle):
             )
             if len(smiles) > 0:
                 latent = np.array([latent])
-                smiling_latents = np.append(smiling_latents, latent, axis=0)
+                if len(smiling_latents) > 0:
+                    smiling_latents = np.append(smiling_latents, latent, axis=0)
+                else:
+                    np.savez_compressed(smiling_data, latent)
+                    continue
+
             else:
                 latent = np.array([latent])
-                not_smiling_latents = np.append(not_smiling_latents, latent, axis=0)
+                if len(not_smiling_latents) > 0:
+                    not_smiling_latents = np.append(not_smiling_latents, latent, axis=0)
+                else:
+                    np.savez_compressed(not_smiling_data, latent)
+                    continue
 
         if len(smiling_latents) and len(not_smiling_latents):
             np.savez_compressed(smiling_data, smiling_latents)
