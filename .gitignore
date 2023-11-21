@@ -6,6 +6,7 @@ img_align_celeba*
 *.h5
 *.png
 outputs
+*v*.*.*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
