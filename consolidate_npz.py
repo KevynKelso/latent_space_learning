@@ -7,14 +7,14 @@ import numpy as np
 from utils_data import plot_faces
 
 
-def consolidate(img_dir):
+def consolidate():
     output_file = "consolidated.npz"
     if isfile(output_file):
         print(f"file '{output_file}' already exists")
         return
 
     all_faces = None
-    npz_files = glob(f"{img_dir}/**/*.npz", recursive=True)
+    npz_files = glob(f"smiling*.npz", recursive=False)
     for file in npz_files:
         data = np.load(file)
         print(data["arr_0"].shape)
@@ -27,17 +27,11 @@ def consolidate(img_dir):
             all_faces = data["arr_0"]
 
     print("Loaded: ", all_faces.shape)
-    plot_faces(all_faces, 5)
-    np.savez_compressed(f"consolidated.npz", np.asarray(all_faces))
-    import os
-
-    import psutil
-
-    print(psutil.Process(os.getpid()).memory_info().rss / 1024**2)
+    np.savez_compressed(f"smiling_consolidated.npz", np.asarray(all_faces))
 
 
 def main():
-    consolidate(sys.argv[1])
+    consolidate()
 
 
 if __name__ == "__main__":
