@@ -1,5 +1,7 @@
 from math import sqrt
+from random import randrange
 
+import imageio
 import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot
@@ -10,8 +12,9 @@ from tensorflow.keras.models import Sequential
 from progressive_growing_of_gans.pretrained_gan import run_model
 from utils_data import plot_faces
 
-ae_model_name = "autoencoder_v0.1.0"
+ae_model_name = "autoencoder_v0.1.2"
 model_name = "latent_classifier_v0.0.4"
+max_images = 10  # adjust this based on how much vram you have
 
 gan_pickle = "./progressive_growing_of_gans/karras2018iclr-celebahq-1024x1024.pkl"
 gsmile_loss = None
@@ -35,7 +38,7 @@ def latent_classifier():
 
 def smile_autoencoder(classifier):
     # last value is smile classification
-    num_latent = 20
+    num_latent = 100
     encoder = Sequential(
         [
             Dense(1024, activation="relu", input_dim=513),
@@ -56,19 +59,18 @@ def smile_autoencoder(classifier):
     )
 
     def smile_loss(y_true, y_pred):
+        cosine_loss_weight = 0.015
         feature_true = y_true[:, :-1]
         feature_pred = y_pred[:, :-1]
 
         class_true = y_true[:, -1]
         class_from_model = classifier(feature_pred)
-        # print(class_true.numpy())
-        # print(class_from_model.numpy())
         bce = tf.keras.losses.BinaryCrossentropy(from_logits=True)
         binary_cross = bce(class_true, class_from_model)
         # order of 0.69
         # tf.print(binary_cross)
 
-        # class_pred = y_pred[:, -1]
+        # class_pred = y_pred[:, -1] # unused but maybe useful?
 
         cosine_loss = tf.keras.losses.CosineSimilarity(
             axis=1, reduction=tf.keras.losses.Reduction.SUM
@@ -76,7 +78,7 @@ def smile_autoencoder(classifier):
         cl = cosine_loss(feature_true, feature_pred)
         # order of -150
         # tf.print(cl)
-        avg = (cl * 0.001 + binary_cross) / 2
+        avg = (cl * cosine_loss_weight + binary_cross) / 2
         # tf.print(avg)
 
         return avg
@@ -211,7 +213,7 @@ def make_smiling_faces_ae():
     )
     interp = autoencoder.predict(ae_input)[:, :-1]
 
-    split = np.split(interp, 10)
+    split = np.split(interp, num_faces)
     for i, s in enumerate(split):
         plot_interpolations(s, i, num_faces)
 
@@ -227,10 +229,44 @@ def plot_interpolations(interp, n, num_faces):
         pyplot.imshow(img)
 
 
+def make_interpolation_gif():
+    num_gifs = 100
+    latent_vectors = np.random.randn(1, 512)
+    ae_input = np.zeros(shape=(num_gifs, 513))
+    index = 0
+    for latent_vector in latent_vectors:
+        for smile_fac in np.linspace(0, 1, num_gifs):
+            ae_input[index] = np.append(latent_vector, smile_fac)
+            index += 1
+
+    autoencoder = tf.keras.models.load_model(
+        ae_model_name, custom_objects={"smile_loss": gsmile_loss}
+    )
+    interp = autoencoder.predict(ae_input)[:, :-1]
+    split = np.split(interp, max_images)
+
+    gif_file = f"./{randrange(0, 10000)}"
+    img_list = []
+    with imageio.get_writer(f"{gif_file}.gif", mode="I") as writer:
+        for interp in split:
+            images = run_model(gan_pickle, interp)
+            for i in images:
+                writer.append_data(i)
+                img_list.append(i)
+
+    with imageio.get_writer(f"{gif_file}_reversed.gif", mode="I") as writer:
+        img_list.reverse()
+        for i in img_list:
+            writer.append_data(i)
+
+    print(gif_file)
+
+
 if __name__ == "__main__":
     print("Training Autoencoder")
-    train_autoencoder()
-    make_smiling_faces_ae()
+    # train_autoencoder()
+    # make_smiling_faces_ae()
+    make_interpolation_gif()
     # print("Training Latent Classifier")
     # train_latent_classifier()
     # make_smiling_faces_classifier()
