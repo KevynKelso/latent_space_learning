@@ -2,6 +2,7 @@ from math import sqrt
 
 import numpy as np
 import tensorflow as tf
+from matplotlib import pyplot
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.models import Sequential
@@ -9,8 +10,11 @@ from tensorflow.keras.models import Sequential
 from progressive_growing_of_gans.pretrained_gan import run_model
 from utils_data import plot_faces
 
-ae_model_name = "autoencoder_v0.0.2"
-model_name = "latent_classifier_v0.0.2"
+ae_model_name = "autoencoder_v0.1.0"
+model_name = "latent_classifier_v0.0.4"
+
+gan_pickle = "./progressive_growing_of_gans/karras2018iclr-celebahq-1024x1024.pkl"
+gsmile_loss = None
 
 
 def latent_classifier():
@@ -29,18 +33,15 @@ def latent_classifier():
     return model
 
 
-def smile_autoencoder():
+def smile_autoencoder(classifier):
     # last value is smile classification
-    num_latent = 256
+    num_latent = 20
     encoder = Sequential(
         [
             Dense(1024, activation="relu", input_dim=513),
             Dense(800, activation="relu"),
             Dense(400, activation="relu"),
             Dense(num_latent, activation="relu"),
-            Dense(800, activation="relu"),
-            Dense(400, activation="relu"),
-            Dense(num_latent, activation="sigmoid"),
         ],
         name="encoder",
     )
@@ -59,34 +60,43 @@ def smile_autoencoder():
         feature_pred = y_pred[:, :-1]
 
         class_true = y_true[:, -1]
-        class_pred = y_pred[:, -1]
+        class_from_model = classifier(feature_pred)
+        # print(class_true.numpy())
+        # print(class_from_model.numpy())
+        bce = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        binary_cross = bce(class_true, class_from_model)
+        # order of 0.69
+        # tf.print(binary_cross)
 
-        squared_difference = tf.square(feature_true - feature_pred)
-        mse = tf.reduce_mean(squared_difference, axis=-1)
+        # class_pred = y_pred[:, -1]
 
-        epsilon = 1e-15  # to prevent log(0)
-        class_pred = tf.clip_by_value(
-            class_pred, epsilon, 1.0 - epsilon
-        )  # Clipping predictions to avoid log(0)
-        loss = -class_true * tf.math.log(class_pred) - (1 - class_true) * tf.math.log(
-            1 - class_pred
+        cosine_loss = tf.keras.losses.CosineSimilarity(
+            axis=1, reduction=tf.keras.losses.Reduction.SUM
         )
-        cross_entropy = tf.reduce_mean(loss)
+        cl = cosine_loss(feature_true, feature_pred)
+        # order of -150
+        # tf.print(cl)
+        avg = (cl * 0.001 + binary_cross) / 2
+        # tf.print(avg)
 
-        return mse + cross_entropy
+        return avg
+
+    global gsmile_loss
+    gsmile_loss = smile_loss
 
     autoencoder = Sequential([encoder, decoder], name="autoencoder")
-    autoencoder.compile(optimizer="adam", loss="cosine_similarity")
+    autoencoder.compile(optimizer="adam", loss=smile_loss)
     autoencoder.summary()
     return autoencoder
 
 
 def load_smiling_not_smiling_dataset():
-    smiling_latents = np.load("smiling.npz")["arr_0"]
+    # return np.load("classifier_dataset.npz")["arr_0"]
+    smiling_latents = np.load("smiling_consolidated.npz")["arr_0"]
     is_smiling = np.ones((smiling_latents.shape[0], 1))
     smiling_latents = np.hstack((smiling_latents, is_smiling))
 
-    not_smiling_latents = np.load("not_smiling.npz")["arr_0"]
+    not_smiling_latents = np.load("not_smiling_consolidated.npz")["arr_0"]
     is_not_smiling = np.zeros((not_smiling_latents.shape[0], 1))
     not_smiling_latents = np.hstack((not_smiling_latents, is_not_smiling))
 
@@ -133,17 +143,18 @@ def train_autoencoder():
     dataset = load_smiling_not_smiling_dataset()
     X_train, X_test = train_test_split(dataset, test_size=0.2)
 
-    autoencoder = smile_autoencoder()
+    classifier = tf.keras.models.load_model(model_name)
+    autoencoder = smile_autoencoder(classifier)
 
     early_stop = tf.keras.callbacks.EarlyStopping(
-        monitor="val_loss", patience=4, restore_best_weights=True
+        monitor="val_loss", patience=10, restore_best_weights=True
     )
 
     autoencoder.fit(
         X_train,
         X_train,
         epochs=1000,
-        batch_size=1024,
+        batch_size=1200,
         shuffle=True,
         validation_data=(X_test, X_test),
         callbacks=[early_stop],
@@ -153,7 +164,6 @@ def train_autoencoder():
 
 def make_predictions():
     num_faces = 9
-    gan_pickle = "./progressive_growing_of_gans/karras2018iclr-celebahq-1024x1024.pkl"
     model = tf.keras.models.load_model(model_name)
 
     latent_vector = np.random.randn(num_faces, 512)
@@ -164,82 +174,64 @@ def make_predictions():
 
 def make_smiling_faces_classifier():
     num_faces = 9
-    gan_pickle = "./progressive_growing_of_gans/karras2018iclr-celebahq-1024x1024.pkl"
     model = tf.keras.models.load_model(model_name)
+    model.summary()
 
-    random_latents = np.random.randn(100000, 512)
+    random_latents = np.random.randn(1000000, 512)
     prediction = model.predict(random_latents)
-    # ind = np.argpartition(np.array(prediction).flatten(), -num_faces)[-num_faces:]
-    bot = np.argpartition(np.array(prediction).flatten(), num_faces)[:num_faces]
-    # top = random_latents[ind]
-    bottom = random_latents[bot]
-    print(f"bottom = {prediction[bot]}")
+    new_data = np.hstack((random_latents, prediction))
+    print(new_data.shape)
+    # np.savez_compressed("classifier_dataset.npz", new_data)
+    ind = np.argpartition(np.array(prediction).flatten(), -num_faces)[-num_faces:]
+    # bot = np.argpartition(np.array(prediction).flatten(), num_faces)[:num_faces]
+    top = random_latents[ind]
+    # bottom = random_latents[bot]
 
-    # images = run_model(gan_pickle, top)
-    # plot_faces(images, int(sqrt(num_faces)), prediction[ind])
+    images = run_model(gan_pickle, top)
+    plot_faces(images, int(sqrt(num_faces)), prediction[ind])
 
-    images = run_model(gan_pickle, bottom)
-    plot_faces(images, int(sqrt(num_faces)), prediction[bot])
+    # images = run_model(gan_pickle, bottom)
+    # plot_faces(images, int(sqrt(num_faces)), prediction[bot])
 
 
 def make_smiling_faces_ae():
-    num_faces = 9
-    gan_pickle = "./progressive_growing_of_gans/karras2018iclr-celebahq-1024x1024.pkl"
-    autoencoder = tf.keras.models.load_model(ae_model_name)
+    num_faces = 10
+    interpolation_res = 10
 
     latent_vectors = np.random.randn(num_faces, 512)
+    ae_input = np.zeros(shape=(num_faces * interpolation_res, 513))
+    index = 0
+    for latent_vector in latent_vectors:
+        for smile_fac in np.linspace(0, 1, interpolation_res):
+            ae_input[index] = np.append(latent_vector, smile_fac)
+            index += 1
 
-    is_smiling = np.ones((latent_vectors.shape[0], 1))
-    not_smiling = np.zeros((latent_vectors.shape[0], 1))
+    autoencoder = tf.keras.models.load_model(
+        ae_model_name, custom_objects={"smile_loss": gsmile_loss}
+    )
+    interp = autoencoder.predict(ae_input)[:, :-1]
 
-    smiling_latent_vectors = np.hstack((latent_vectors, is_smiling))
-    print(smiling_latent_vectors)
-    not_smiling_latent_vectors = np.hstack((latent_vectors, not_smiling))
+    split = np.split(interp, 10)
+    for i, s in enumerate(split):
+        plot_interpolations(s, i, num_faces)
 
-    smiling_latents = autoencoder.predict(smiling_latent_vectors)
-    print(smiling_latent_vectors)
-    print("\n\n\n")
-    print(smiling_latents)
-    smiling_latents = smiling_latents[:, :-1]
+    pyplot.show()
 
-    print(f"smiling_latents shape = {smiling_latents.shape}")
-    print("Smiling Faces :)")
 
-    images = run_model(gan_pickle, smiling_latents)
-    plot_faces(images, int(sqrt(num_faces)))
+def plot_interpolations(interp, n, num_faces):
+    images = run_model(gan_pickle, interp)
 
-    print(f"not_smiling_latents shape = {not_smiling_latent_vectors.shape}")
-    autoencoder = tf.keras.models.load_model(ae_model_name)
-    not_smiling_latents = autoencoder.predict(not_smiling_latent_vectors)
-    not_smiling_latents = not_smiling_latents[:, :-1]
-
-    print("NOT Smiling Faces :(")
-    images = run_model(gan_pickle, not_smiling_latents)
-    plot_faces(images, int(sqrt(num_faces)))
-
-    print(f"Interpolation of face 0")
-    interpolation = [
-        np.hstack((latent_vectors[0], 0)),
-        np.hstack((latent_vectors[0], 0.3)),
-        np.hstack((latent_vectors[0], 0.4)),
-        np.hstack((latent_vectors[0], 0.5)),
-        np.hstack((latent_vectors[0], 0.6)),
-        np.hstack((latent_vectors[0], 0.7)),
-        np.hstack((latent_vectors[0], 0.8)),
-        np.hstack((latent_vectors[0], 0.9)),
-        np.hstack((latent_vectors[0], 1)),
-    ]
-    autoencoder = tf.keras.models.load_model(ae_model_name)
-    interp_pred = autoencoder.predict(interpolation)[:, :-1]
-    images = run_model(gan_pickle, interp_pred)
-    plot_faces(images, int(sqrt(num_faces)))
+    for i, img in enumerate(images):
+        pyplot.subplot(num_faces, len(images), i + 1 + (n * len(images)))
+        pyplot.axis("off")
+        pyplot.imshow(img)
 
 
 if __name__ == "__main__":
     print("Training Autoencoder")
     train_autoencoder()
     make_smiling_faces_ae()
-    print("Training Latent Classifier")
+    # print("Training Latent Classifier")
     # train_latent_classifier()
-    make_smiling_faces_classifier()
+    # make_smiling_faces_classifier()
     # make_predictions()
