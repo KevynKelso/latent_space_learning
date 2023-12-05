@@ -181,19 +181,25 @@ def make_smiling_faces_classifier():
 
     random_latents = np.random.randn(1000000, 512)
     prediction = model.predict(random_latents)
-    new_data = np.hstack((random_latents, prediction))
-    print(new_data.shape)
-    # np.savez_compressed("classifier_dataset.npz", new_data)
     ind = np.argpartition(np.array(prediction).flatten(), -num_faces)[-num_faces:]
-    # bot = np.argpartition(np.array(prediction).flatten(), num_faces)[:num_faces]
     top = random_latents[ind]
-    # bottom = random_latents[bot]
 
     images = run_model(gan_pickle, top)
     plot_faces(images, int(sqrt(num_faces)), prediction[ind])
 
-    # images = run_model(gan_pickle, bottom)
-    # plot_faces(images, int(sqrt(num_faces)), prediction[bot])
+
+def make_not_smiling_faces_classifier():
+    num_faces = 9
+    model = tf.keras.models.load_model(model_name)
+    model.summary()
+
+    random_latents = np.random.randn(1000000, 512)
+    prediction = model.predict(random_latents)
+    bot = np.argpartition(np.array(prediction).flatten(), num_faces)[:num_faces]
+    bottom = random_latents[bot]
+
+    images = run_model(gan_pickle, bottom)
+    plot_faces(images, int(sqrt(num_faces)), prediction[bot])
 
 
 def make_smiling_faces_ae():
@@ -245,7 +251,7 @@ def make_interpolation_gif():
     interp = autoencoder.predict(ae_input)
     split = np.split(interp, max_images)
 
-    gif_file = f"./outputs_v1.4/{randrange(0, 10000)}"
+    gif_file = f"./outputs_v1.4/{randrange(0, 100000)}"
     with imageio.get_writer(f"{gif_file}.gif", mode="I") as writer:
         for interp in split:
             images = run_model(gan_pickle, interp)
@@ -256,11 +262,12 @@ def make_interpolation_gif():
 
 
 if __name__ == "__main__":
+    print("Training Latent Classifier")
+    train_latent_classifier()
+    make_smiling_faces_classifier()
+    make_not_smiling_faces_classifier()
+    make_predictions()
     print("Training Autoencoder")
-    # train_autoencoder()
-    # make_smiling_faces_ae()
+    train_autoencoder()
+    make_smiling_faces_ae()
     make_interpolation_gif()
-    # print("Training Latent Classifier")
-    # train_latent_classifier()
-    # make_smiling_faces_classifier()
-    # make_predictions()
