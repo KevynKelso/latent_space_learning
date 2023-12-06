@@ -24,7 +24,7 @@ Please move them into this directory.
 
 4. Run `python latent_classifier.py`. This should generate some plots and finally a gif with a smile interpolation in a versioned output folder.
 
-[Not smiling woman transitioning to a smiling woman](./5817.gif)
+![Not smiling woman transitioning to a smiling woman](./5817.gif)
 
 ### Known Issues
 - Calling autoencoder.predict multiple times in the same python instance results in an error due to the custom loss function.
