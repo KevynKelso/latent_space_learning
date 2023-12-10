@@ -9,10 +9,11 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.layers import BatchNormalization, Dense, Dropout
 from tensorflow.keras.models import Sequential
 
+from plotlearning import PlotLearning
 from progressive_growing_of_gans.pretrained_gan import run_model
 from utils_data import plot_faces
 
-ae_model_name = "autoencoder_v0.1.4"
+ae_model_name = "autoencoder_v0.1.5"
 model_name = "latent_classifier_v0.0.4"
 max_images = 10  # adjust this based on how much vram you have
 
@@ -143,7 +144,7 @@ def train_latent_classifier():
 
 def train_autoencoder():
     dataset = load_smiling_not_smiling_dataset()
-    X_train, X_test = train_test_split(dataset, test_size=0.2)
+    X_train, X_test = train_test_split(dataset, test_size=0.17)
 
     classifier = tf.keras.models.load_model(model_name)
     autoencoder = smile_autoencoder(classifier)
@@ -159,7 +160,7 @@ def train_autoencoder():
         batch_size=1200,
         shuffle=True,
         validation_data=(X_test, X_test),
-        callbacks=[early_stop],
+        callbacks=[early_stop, PlotLearning()],
     )
     autoencoder.save(ae_model_name)
 
@@ -262,11 +263,11 @@ def make_interpolation_gif():
 
 
 if __name__ == "__main__":
-    print("Training Latent Classifier")
-    train_latent_classifier()
-    make_smiling_faces_classifier()
-    make_not_smiling_faces_classifier()
-    make_predictions()
+    # print("Training Latent Classifier")
+    # train_latent_classifier()
+    # make_smiling_faces_classifier()
+    # make_not_smiling_faces_classifier()
+    # make_predictions()
     print("Training Autoencoder")
     train_autoencoder()
     make_smiling_faces_ae()
